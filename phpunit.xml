@@ -23,7 +23,14 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_DATABASE" value="testing"/>
+        <!--
+            Tests run against SQLite in-memory: each test starts from a clean
+            schema, no disk I/O, and the suite stays decoupled from the MySQL
+            container. The migration is portable enough (date, decimal, unsigned
+            int) to run identically on both engines.
+        -->
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
