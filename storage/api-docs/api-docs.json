@@ -1,0 +1,448 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Book Library API",
+        "description": "REST API for managing a small library of books.\n\n- All endpoints live under `/api/v1`.\n- Errors are returned as `{ \"message\": string }`; validation errors\n  additionally include `{ \"errors\": { field: [string, ...] } }`.",
+        "contact": {
+            "name": "Oleg Zadorozhnyi",
+            "email": "ipfound@gmail.com"
+        },
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:8080",
+            "description": "Local Sail environment"
+        }
+    ],
+    "paths": {
+        "/api/v1/books": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "List books with pagination",
+                "description": "GET /api/v1/books — paginated list of books.\n\nThe page size comes from ?per_page (defaulted and clamped by\n{@see PaginationSize::clamp()} — controllers stay free of magic\nnumbers and clamping arithmetic).\n\nIf the requested ?page exceeds the last available page (and the\ndataset is not empty) we return 404 — asking for \"page 5\" of a\n3-page result is a client error, not an empty success.",
+                "operationId": "ab6891af84b2f0a68a33cdfe8324ce98",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 1,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Page size; clamped to [1, 100].",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 20,
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated collection of books",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Book"
+                                            }
+                                        },
+                                        "links": {
+                                            "type": "object"
+                                        },
+                                        "meta": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Requested page is out of range",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorMessage"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Create a new book",
+                "description": "POST /api/v1/books — create a new book.\n\nValidation lives in {@see StoreBookRequest}; on failure Laravel\nreturns 422 with field-level errors. Only validated fields are\nmass-assigned (defence in depth alongside Book::$fillable).",
+                "operationId": "a1d219764293fcc881a84c059760d6f6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Book created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Book"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/books/{book}": {
+            "get": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Get a book by id",
+                "description": "GET /api/v1/books/{book} — single book by id.\n\nRoute model binding resolves {book} → Book; a missing id raises\nModelNotFoundException, which {@see \\App\\Exceptions\\ApiExceptionRenderer}\nrenders as a JSON 404.",
+                "operationId": "c6fa5108b7e7a70db4369b85323eb239",
+                "parameters": [
+                    {
+                        "name": "book",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Book found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Book"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorMessage"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Delete a book",
+                "description": "DELETE /api/v1/books/{book} — delete a book.\n\nReturns 204 No Content per REST conventions: the resource is gone,\nthere is nothing meaningful left to send back.",
+                "operationId": "ac1507f7ac3002c7bd54229ed7570d1c",
+                "parameters": [
+                    {
+                        "name": "book",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Book deleted"
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorMessage"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Books"
+                ],
+                "summary": "Update a book (partial or full)",
+                "description": "PUT|PATCH /api/v1/books/{book} — partial or full update.\n\n{@see UpdateBookRequest} wraps base rules with `sometimes` so the\nsame endpoint serves PATCH (partial) and PUT (full) without the\nclient having to resend untouched fields.\n\n`$book->fresh()` reloads the row to surface any DB-side mutations\n(defaults, triggers, updated_at) instead of returning the stale\nin-memory copy.",
+                "operationId": "18a7cab9262615e87dda426e071e526e",
+                "parameters": [
+                    {
+                        "name": "book",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Any subset of the writable Book attributes.",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/BookPayload"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Book updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Book"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Book not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorMessage"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Book": {
+                "required": [
+                    "id",
+                    "title",
+                    "publisher",
+                    "author",
+                    "genre",
+                    "publication_date",
+                    "word_count",
+                    "price_usd",
+                    "created_at",
+                    "updated_at"
+                ],
+                "properties": {
+                    "id": {
+                        "description": "Public JSON shape for a single Book.\n\nThe OpenAPI `Book` schema is co-located here because this class is\nthe authoritative definition of what the API actually returns —\nkeeping the contract next to the code that produces it minimises\nthe chance of the two drifting apart.",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "The Hobbit"
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "example": "Allen & Unwin"
+                    },
+                    "author": {
+                        "type": "string",
+                        "example": "J. R. R. Tolkien"
+                    },
+                    "genre": {
+                        "type": "string",
+                        "example": "Fantasy"
+                    },
+                    "publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "1937-09-21"
+                    },
+                    "word_count": {
+                        "type": "integer",
+                        "example": 95022
+                    },
+                    "price_usd": {
+                        "description": "Decimal string with exactly 2 fractional digits.",
+                        "type": "string",
+                        "example": "14.99"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-28T17:08:38+00:00"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2026-04-28T17:08:38+00:00"
+                    }
+                },
+                "type": "object"
+            },
+            "ErrorMessage": {
+                "required": [
+                    "message"
+                ],
+                "properties": {
+                    "message": {
+                        "description": "OpenAPI 3.0 specification entry point.\n\nThis class carries no runtime behaviour — it exists solely to host the\ntop-level `#[OA\\*]` attributes (Info, Server, Tags, common Schemas)\nthat describe the API as a whole. Keeping them out of the controller\nkeeps both files focused: BookController stays a routing layer and\nthis file is the single source of truth for cross-cutting docs.\n\nThe l5-swagger scanner picks up the attributes on every class under\napp/ during `php artisan l5-swagger:generate`.",
+                        "type": "string",
+                        "example": "Resource not found"
+                    }
+                },
+                "type": "object"
+            },
+            "ValidationError": {
+                "required": [
+                    "message",
+                    "errors"
+                ],
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "The title field is required."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "example": {
+                            "title": [
+                                "The title field is required."
+                            ]
+                        },
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "BookPayload": {
+                "description": "Writable Book attributes accepted by POST/PATCH endpoints.",
+                "required": [
+                    "title",
+                    "publisher",
+                    "author",
+                    "genre",
+                    "publication_date",
+                    "word_count",
+                    "price_usd"
+                ],
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "example": "The Hobbit",
+                        "maxLength": 255
+                    },
+                    "publisher": {
+                        "type": "string",
+                        "example": "Allen & Unwin",
+                        "maxLength": 255
+                    },
+                    "author": {
+                        "type": "string",
+                        "example": "J. R. R. Tolkien",
+                        "maxLength": 255
+                    },
+                    "genre": {
+                        "type": "string",
+                        "example": "Fantasy",
+                        "maxLength": 100
+                    },
+                    "publication_date": {
+                        "type": "string",
+                        "format": "date",
+                        "example": "1937-09-21"
+                    },
+                    "word_count": {
+                        "type": "integer",
+                        "example": 95022,
+                        "minimum": 1
+                    },
+                    "price_usd": {
+                        "description": "Price in USD. Up to 2 fractional digits; stored as DECIMAL(10,2).",
+                        "type": "number",
+                        "format": "float",
+                        "example": 14.99,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Books",
+            "description": "CRUD operations for the Book resource."
+        }
+    ]
+}
