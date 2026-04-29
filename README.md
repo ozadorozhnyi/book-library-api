@@ -8,7 +8,7 @@ semantics, validation, pagination, and an interactive Swagger UI.
 
 | Layer       | Choice                                                       |
 | ----------- | ------------------------------------------------------------ |
-| Language    | PHP **8.5** (in Docker), 8.3+ supported locally              |
+| Language    | PHP **8.5** (inside the Sail container)                      |
 | Framework   | Laravel **13.6**                                             |
 | Database    | MySQL **8.4** LTS                                            |
 | ORM         | Eloquent (Laravel built-in)                                  |
@@ -18,35 +18,39 @@ semantics, validation, pagination, and an interactive Swagger UI.
 
 ## Requirements
 
-The recommended way is to run everything inside Docker — you only need a
-container runtime on the host:
+Everything runs inside Docker — the host only needs a container runtime:
 
-* **Docker** or **OrbStack** (drop-in replacement for Docker Desktop on macOS)
-* **PHP 8.3+** locally — only needed once, to run `composer install` for the
-  initial bootstrap. After that, every command is run inside the container.
-* **Composer 2.x** — for the same one-time bootstrap step.
+* **Docker** (Docker Desktop / Docker Engine) **or** **OrbStack**
+  (drop-in replacement for Docker Desktop on macOS).
 
-If you do not want to use Docker at all, you can run the API directly against
-a local PHP 8.3+ and a MySQL 8.x server; see
-[Running without Docker](#running-without-docker) below.
+No local PHP, Composer or MySQL is required — even the initial
+`composer install` runs inside an official Sail container image.
 
 ## Quick start
 
 After cloning the repository and `cd`-ing into this directory:
 
 ```bash
-# 1. Install PHP dependencies once on the host
-composer install
+# 1. Install PHP dependencies through a one-shot Composer container
+#    (no PHP / Composer needed on the host)
+docker run --rm \
+    -u "$(id -u):$(id -g)" \
+    -v "$(pwd):/var/www/html" \
+    -w /var/www/html \
+    laravelsail/php85-composer:latest \
+    composer install --ignore-platform-reqs
 
-# 2. Copy the environment template and generate an APP_KEY
+# 2. Copy the environment template
 cp .env.example .env
-php artisan key:generate
 
 # 3. Bring up the containers (PHP 8.5, MySQL 8.4) — the first run builds
 #    the image and may take ~5–10 minutes
 ./vendor/bin/sail up -d
 
-# 4. Bootstrap the application: migrate, seed sample data, regenerate Swagger
+# 4. Generate the APP_KEY (run inside the container)
+./vendor/bin/sail artisan key:generate
+
+# 5. Bootstrap the application: migrate, seed sample data, regenerate Swagger
 ./vendor/bin/sail artisan app:setup --demo
 ```
 
@@ -78,7 +82,7 @@ other projects on the same host:
 
 Override any of these in `.env` if your machine already uses those ports.
 
-### Running with Docker (Sail)
+### Sail commands
 
 ```bash
 ./vendor/bin/sail up -d            # start the stack in the background
@@ -93,24 +97,6 @@ Two containers run under the `bookapi-` prefix:
 
 * `bookapi-laravel.test-1` — PHP-FPM + Nginx, exposed on `localhost:8080`
 * `bookapi-mysql-1`        — MySQL 8.4, exposed on `localhost:33306`
-
-### Running without Docker
-
-If you have PHP 8.3+, Composer and a MySQL server on the host:
-
-```bash
-composer install
-cp .env.example .env
-
-# Point Laravel at your local MySQL
-sed -i '' 's/DB_HOST=mysql/DB_HOST=127.0.0.1/' .env
-
-php artisan key:generate
-php artisan app:setup --demo
-php artisan serve --port=8080
-```
-
-The rest of the commands below are identical — just drop the `sail` prefix.
 
 ## API endpoints
 
